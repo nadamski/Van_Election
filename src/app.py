@@ -68,11 +68,11 @@ def server(input, output, session):
         df_mayor = df[df[candidates[input.Candidate()]]==1]
         fig, (ax1, ax2) = plt.subplots(1, 2)
         plt.subplot(121)
-        df_mayor['Council'].hist(ax=ax1, bins=11, density=True, align='mid')
+        df_mayor['Council'].hist(ax=ax1, bins=[0.5+i for i in range(-1, 11)], density=True, align='mid')
         plt.title('Number of Council Votes')
         plt.gca().yaxis.set_major_formatter(PercentFormatter(1))
         plt.subplot(122)
-        df_mayor['Park'].hist(ax=ax2, bins=7, density=True, align='mid')
+        df_mayor['Park'].hist(ax=ax2, bins=[0.5+i for i in range(-1, 8)], density=True, align='mid')
         plt.gca().yaxis.set_major_formatter(PercentFormatter(1))
         plt.title('Number of Park Board Votes')
         #ax.set_axisbelow(True)
