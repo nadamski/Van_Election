@@ -1,4 +1,5 @@
 from shiny import ui, render, App
+from pathlib import Path
 import pickle
 from matplotlib import pyplot as plt
 from collections import Counter
@@ -8,22 +9,21 @@ import pandas as pd
 
 ############################
 
-df = pd.read_csv('2022MunicipalElectionAnonymousBallotMarking.csv', skiprows=[0, 2], dtype=str)
-headers = pd.read_csv('2022MunicipalElectionAnonymousBallotMarking.csv', nrows=2)
+infile = Path(__file__).parent / 'Votes_compressed.csv.gz'
+df = pd.read_csv(infile, compression='gzip')
 
 
-df = df.dropna()
-for col in df.columns[3:]:
+for col in df.columns[2:]:
     df[col] = df[col].astype(int)
 
-    
+
 candidates = {}
-for candidate in df.columns[3:-6]: 
+for candidate in df.columns[2:-6]: 
     n, name = candidate.split(' ', 1)
     candidates[n] = name
     candidates[name] = n
 
-df.columns = ['Vote Type', 'Poll', 'Ballot Type'] + list(candidates)[::2] + ['1Y', '1N', '2Y', '2N', '3Y', '3N']
+df.columns = ['Vote Type', 'Poll'] + list(candidates)[::2] + ['1Y', '1N', '2Y', '2N', '3Y', '3N']
 
 
 
@@ -46,15 +46,17 @@ df['Borrow'] = df.loc[:, '1Y':'3N'].sum(axis=1)
 
 app_ui = ui.page_fluid(
     ui.h2("Vancouver 2022 Election Data"),
-    ui.layout_sidebar(
-        ui.panel_sidebar(
-            ui.input_radio_buttons("Mayor", "Mayoral Vote", MayoralCandidates)
-        ),
-        ui.panel_main(
-            ui.output_plot("plot"),
-            ui.output_plot("plot2")
-        )
-    ),
+    
+    ui.input_select("Candidate", 
+                    "Choose a candidate:", 
+                    {
+                        "Mayoral Candidates": {i:i for i in MayoralCandidates}, 
+                        "Council Candidates": {i:i for i in CouncilCandidates}
+                    },
+                   ),
+    ui.output_plot("plot"),
+    ui.output_plot("plot2")
+
 
 )
 
@@ -63,7 +65,7 @@ def server(input, output, session):
     @output
     @render.plot
     def plot(): 
-        df_mayor = df[df[candidates[input.Mayor()]]==1]
+        df_mayor = df[df[candidates[input.Candidate()]]==1]
         fig, (ax1, ax2) = plt.subplots(1, 2)
         plt.subplot(121)
         df_mayor['Council'].hist(ax=ax1, bins=11, density=True, align='mid')
@@ -80,12 +82,13 @@ def server(input, output, session):
     @output
     @render.plot
     def plot2(): 
-        df_mayor = df[df[candidates[input.Mayor()]]==1]
+        df_mayor = df[df[candidates[input.Candidate()]]==1]
         fig, ax = plt.subplots()
-        data = df_mayor.loc[:,'100':'158'].sum().sort_values(ascending=False)[0:15]/df_mayor.shape[0]
+        data = df_mayor.loc[:,'100':'158'].sum().sort_values(ascending=False)[0:15]
         data = data.sort_values(ascending=True)
         data.index = data.index.map(lambda x: candidates[x])
-        data.plot.barh(ax=ax)
+        data.plot.barh(ax=ax, xlim = [0, df_mayor.shape[0]])
+        
         plt.title('Council Votes')
         #ax.set_axisbelow(True)
         #ax.grid(color='gray', linestyle='dashed')
